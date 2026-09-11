@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 export default function CompleteProfilePage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [role, setRole] = useState("PARTICIPANT");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -25,7 +24,7 @@ export default function CompleteProfilePage() {
       const response = await fetch("/api/auth/complete-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed, role }),
+        body: JSON.stringify({ name: trimmed, role: "PARTICIPANT" }),
       });
       const data = await response.json();
 
@@ -34,7 +33,7 @@ export default function CompleteProfilePage() {
         return;
       }
 
-      router.push(role === "ADMIN" ? "/admin" : "/dashboard");
+      router.push("/dashboard");
     } catch (err) {
       console.error(err);
       setError("Something went wrong. Please try again.");
@@ -74,38 +73,6 @@ export default function CompleteProfilePage() {
                 onChange={(e) => setName(e.target.value)}
                 className="w-full min-h-[44px] px-4 border border-gray-200 rounded-xl outline-none focus:border-[#17251c] text-gray-900 text-sm placeholder:text-gray-400 transition"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                I am a
-              </label>
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole("PARTICIPANT")}
-                  className={`min-h-[80px] sm:h-24 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1.5 sm:gap-2 ${
-                    role === "PARTICIPANT"
-                      ? "border-[#17251c] bg-[#17251c]/5"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <span className="text-xl sm:text-2xl">🎯</span>
-                  <span className="text-[10px] sm:text-xs font-semibold text-gray-700">Participant</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("ADMIN")}
-                  className={`min-h-[80px] sm:h-24 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1.5 sm:gap-2 ${
-                    role === "ADMIN"
-                      ? "border-[#c9a84c] bg-[#c9a84c]/5"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <span className="text-xl sm:text-2xl">⚡</span>
-                  <span className="text-[10px] sm:text-xs font-semibold text-gray-700">Admin</span>
-                </button>
-              </div>
             </div>
 
             {error && (

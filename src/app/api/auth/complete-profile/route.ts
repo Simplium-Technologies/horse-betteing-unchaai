@@ -16,7 +16,6 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const name = body.name?.trim();
-    const role = body.role;
 
     if (!name || name.length < 2) {
       return NextResponse.json(
@@ -25,16 +24,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (role && !["ADMIN", "PARTICIPANT"].includes(role)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid role" },
-        { status: 400 }
-      );
-    }
-
     const data: { name: string; role?: UserRole } = { name };
-    if (role && user.name === null) {
-      data.role = role as UserRole;
+    if (user.name === null) {
+      data.role = "PARTICIPANT" as UserRole;
     }
 
     await prisma.user.update({
