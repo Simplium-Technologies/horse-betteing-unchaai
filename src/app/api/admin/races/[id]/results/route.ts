@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { calculateRacePoints } from "@/lib/scoring";
+import { notifyWS } from "@/lib/notify";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -82,11 +83,7 @@ export async function POST(
 
     await calculateRacePoints(id);
 
-    fetch("http://localhost:3001/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event: "race:results_entered", data: { raceId: id } }),
-    }).catch(() => {});
+    notifyWS("race:results_entered", { raceId: id });
 
     return NextResponse.json({ success: true });
   } catch (error) {

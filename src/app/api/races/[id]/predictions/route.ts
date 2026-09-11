@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { notifyWS } from "@/lib/notify";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -103,11 +104,7 @@ export async function POST(
       },
     });
 
-    fetch("http://localhost:3001/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event: "race:prediction_new", data: { raceId: id } }),
-    }).catch(() => {});
+    notifyWS("race:prediction_new", { raceId: id });
 
     return NextResponse.json({ success: true, predictionId: prediction.id });
   } catch (error) {
