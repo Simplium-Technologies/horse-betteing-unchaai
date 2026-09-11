@@ -1,0 +1,248 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  ADMIN
+  PARTICIPANT
+}
+
+enum RaceStatus {
+  UPCOMING
+  OPEN
+  CLOSED
+  COMPLETED
+}
+
+enum SeasonStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum PointRuleType {
+  CORRECT_POSITION
+  TOP_N
+}
+
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id          String   @id @default(cuid())
+  phoneNumber String   @unique
+  name        String?
+  role        UserRole @default(PARTICIPANT)
+
+  predictions Prediction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+// ============================================================
+// HORSE
+// ============================================================
+
+model Horse {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  number      Int      @unique
+  imageUrl    String?
+  description String?
+  age         String?
+  breed       String?
+  wins        Int      @default(0)
+  totalRuns   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  raceHorses          RaceHorse[]
+  predictionSelections PredictionSelection[]
+  raceResults         RaceResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+// ============================================================
+// SEASON
+// ============================================================
+
+model Season {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  startDate   DateTime
+  endDate     DateTime
+  status      SeasonStatus @default(UPCOMING)
+
+  races Race[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+// ============================================================
+// RACE
+// ============================================================
+
+model Race {
+  id                   String     @id @default(cuid())
+  name                 String
+  durationMinutes      Int
+  autoClose            Boolean    @default(false)
+  status               RaceStatus @default(UPCOMING)
+  includePoints        Boolean    @default(true)
+  seasonId             String?
+  startedAt            DateTime?
+  openedAt             DateTime?
+  closedAt             DateTime?
+
+  season   Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  raceHorses RaceHorse[]
+  predictions Prediction[]
+  results     RaceResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+// ============================================================
+// HORSES PARTICIPATING IN A RACE
+// ============================================================
+
+model RaceHorse {
+  id      String @id @default(cuid())
+  raceId  String
+  horseId String
+
+  race  Race  @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  horse Horse @relation(fields: [horseId], references: [id])
+
+  @@unique([raceId, horseId])
+}
+
+
+// ============================================================
+// PREDICTION
+// ============================================================
+
+model Prediction {
+  id     String @id @default(cuid())
+  userId String
+  raceId String
+
+  submittedAt DateTime @default(now())
+  totalPoints Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+  race Race @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  selections PredictionSelection[]
+
+  @@unique([userId, raceId])
+}
+
+
+// ============================================================
+// PREDICTION SELECTION
+// ============================================================
+
+model PredictionSelection {
+  id           String @id @default(cuid())
+  predictionId String
+  horseId      String
+
+  predictedPosition Int
+
+  prediction Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+
+  horse Horse @relation(fields: [horseId], references: [id])
+
+  @@unique([predictionId, horseId])
+  @@unique([predictionId, predictedPosition])
+}
+
+
+// ============================================================
+// ACTUAL RACE RESULTS
+// ============================================================
+
+model RaceResult {
+  id      String @id @default(cuid())
+  raceId  String
+  horseId String
+
+  actualPosition Int
+
+  race  Race  @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  horse Horse @relation(fields: [horseId], references: [id])
+
+  @@unique([raceId, horseId])
+  @@unique([raceId, actualPosition])
+}
+
+
+// ============================================================
+// POINT RULES
+// ============================================================
+
+model PointRule {
+  id String @id @default(cuid())
+
+  name String
+
+  type PointRuleType
+
+  // Used for CORRECT_POSITION
+  // Example:
+  // position = 1 → Correct 1st position
+  // position = 2 → Correct 2nd position
+  position Int?
+
+  // Used for TOP_N
+  // Example:
+  // topN = 3 → Horse finishes in Top 3
+  // topN = 5 → Horse finishes in Top 5
+  topN Int?
+
+  points   Int
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OtpVerification {
+  id String @id @default(cuid())
+
+  phoneNumber String
+  otpHash     String
+
+  expiresAt DateTime
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([phoneNumber])
+}
