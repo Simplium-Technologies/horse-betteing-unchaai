@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { notifyWS } from "@/lib/notify";
 import { NextResponse } from "next/server";
 
 const validTransitions: Record<string, string[]> = {
@@ -56,11 +57,7 @@ export async function PUT(
       data: updateData,
     });
 
-    fetch("http://localhost:3001/notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event: "race:status_changed", data: { raceId: id, status, closedAt: updated.closedAt?.toISOString() } }),
-    }).catch(() => {});
+    notifyWS("race:status_changed", { raceId: id, status, closedAt: updated.closedAt?.toISOString() });
 
     return NextResponse.json({ success: true, race: updated });
   } catch (error) {
