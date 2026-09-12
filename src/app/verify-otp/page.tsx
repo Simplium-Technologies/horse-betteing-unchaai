@@ -7,14 +7,12 @@ function VerifyOtpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const phoneNumber = searchParams.get("phone") || "";
-  const devOtpFromUrl = searchParams.get("otp") || "";
 
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [devOtp, setDevOtp] = useState(devOtpFromUrl);
 
   async function handleVerify(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -72,9 +70,6 @@ function VerifyOtpForm() {
         return;
       }
 
-      if (data.developmentOtp) {
-        setDevOtp(data.developmentOtp);
-      }
       setMessage("A new OTP has been sent.");
     } catch (error) {
       console.error(error);
@@ -85,7 +80,35 @@ function VerifyOtpForm() {
   }
 
   useEffect(() => {
-    if (!phoneNumber) router.replace("/login");
+    if (!phoneNumber) {
+      router.replace("/login");
+      return;
+    }
+
+    // WebOTP API: Auto-fill OTP from SMS
+    if (typeof window !== "undefined" && "OTPCredential" in window) {
+      const ac = new AbortController();
+
+      navigator.credentials
+        .get({
+          otp: { transport: ["sms"] },
+          signal: ac.signal,
+        } as any)
+        .then((credential: any) => {
+          if (credential && credential.code) {
+            setOtp(credential.code);
+          }
+        })
+        .catch((err: any) => {
+          if (err?.name !== "AbortError") {
+            console.error("WebOTP API error:", err);
+          }
+        });
+
+      return () => {
+        ac.abort();
+      };
+    }
   }, [phoneNumber, router]);
 
   return (
@@ -103,12 +126,6 @@ function VerifyOtpForm() {
           <p className="font-semibold text-gray-700 mt-1 text-xs sm:text-sm">
             +91 {phoneNumber}
           </p>
-          {devOtp && (
-            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider">Your OTP</p>
-              <p className="text-2xl sm:text-3xl font-bold text-amber-700 tracking-[0.3em] mt-1">{devOtp}</p>
-            </div>
-          )}
         </div>
 
         <div className="bg-white rounded-2xl sm:rounded-3xl card-shadow p-5 sm:p-8 border border-gray-50">
@@ -120,6 +137,7 @@ function VerifyOtpForm() {
               <input
                 type="text"
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 maxLength={6}
                 autoFocus
                 placeholder="000000"

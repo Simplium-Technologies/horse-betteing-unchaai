@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { generateOtp, hashOtp } from "@/lib/otp";
+import { sendSmsOtp } from "@/lib/sms";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -52,13 +53,16 @@ export async function POST(request: Request) {
       },
     });
 
-    // Development only
+    // Send SMS via Dovesoft API
+    const smsResult = await sendSmsOtp(phoneNumber, otp);
+
+    // Console log for local dev
     console.log(`OTP for ${phoneNumber}: ${otp}`);
 
     return NextResponse.json({
       success: true,
       message: "OTP sent successfully",
-      developmentOtp: otp,
+      smsSent: smsResult.success,
     });
   } catch (error) {
     console.error("Send OTP error:", error);

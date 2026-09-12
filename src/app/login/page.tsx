@@ -8,7 +8,6 @@ export default function LoginPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [devOtp, setDevOtp] = useState("");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,11 +32,7 @@ export default function LoginPage() {
         return;
       }
 
-      if (data.developmentOtp) {
-        setDevOtp(data.developmentOtp);
-      }
-
-      router.push(`/verify-otp?phone=${encodeURIComponent(phoneNumber)}${data.developmentOtp ? `&otp=${encodeURIComponent(data.developmentOtp)}` : ""}`);
+      router.push(`/verify-otp?phone=${encodeURIComponent(phoneNumber)}`);
     } catch (error) {
       console.error(error);
       setError("Something went wrong. Please try again.");
@@ -115,13 +110,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {devOtp && (
-            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
-              <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider">Your OTP</p>
-              <p className="text-2xl sm:text-3xl font-bold text-amber-700 tracking-[0.3em] mt-1">{devOtp}</p>
-            </div>
-          )}
 
           <p className="text-[10px] sm:text-[11px] text-center text-gray-300 mt-5 sm:mt-6">
             By continuing, you agree to our terms and privacy policy
