@@ -39,6 +39,7 @@ export default function SeasonDetailPage() {
   const [formAutoClose, setFormAutoClose] = useState(false);
   const [formIncludePoints, setFormIncludePoints] = useState(true);
   const [formHorseIds, setFormHorseIds] = useState<string[]>([]);
+  const [editingRace, setEditingRace] = useState<Race | null>(null);
 
   const refetchData = useCallback(() => {
     fetchData();
@@ -67,7 +68,17 @@ export default function SeasonDetailPage() {
 
   function resetForm() {
     setFormName(""); setFormDuration(""); setFormAutoClose(false); setFormIncludePoints(true); setFormHorseIds([]);
-    setShowForm(false); setError("");
+    setShowForm(false); setError(""); setEditingRace(null);
+  }
+
+  function startEditing(race: Race) {
+    setEditingRace(race);
+    setFormName(race.name);
+    setFormDuration(String(race.durationMinutes));
+    setFormAutoClose(race.autoClose);
+    setFormIncludePoints(race.includePoints);
+    setFormHorseIds(race.raceHorses.map((rh) => rh.horseId));
+    setShowForm(true);
   }
 
   function toggleHorse(horseId: string) {
@@ -84,6 +95,25 @@ export default function SeasonDetailPage() {
       const res = await fetch("/api/admin/races", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: formName, durationMinutes: Number(formDuration), autoClose: formAutoClose, includePoints: formIncludePoints, horseIds: formHorseIds, seasonId }),
+      });
+      const data = await res.json();
+      if (!data.success) { setError(data.error); return; }
+      resetForm(); fetchData();
+    } catch { setError("Something went wrong"); }
+    finally { setSaving(false); }
+  }
+
+  async function handleUpdate() {
+    setError("");
+    if (!editingRace) return;
+    if (!formName.trim()) { setError("Race name is required"); return; }
+    if (!formDuration || Number(formDuration) < 1) { setError("Duration must be at least 1 minute"); return; }
+    if (formHorseIds.length < 2) { setError("Select at least 2 horses"); return; }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/races", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingRace.id, name: formName, durationMinutes: Number(formDuration), autoClose: formAutoClose, includePoints: formIncludePoints, horseIds: formHorseIds }),
       });
       const data = await res.json();
       if (!data.success) { setError(data.error); return; }
@@ -152,7 +182,7 @@ export default function SeasonDetailPage() {
 
       {showForm && (
         <div className="bg-white rounded-2xl card-shadow border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 animate-slide-up">
-          <h3 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">New Race</h3>
+          <h3 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">{editingRace ? "Edit Race" : "New Race"}</h3>
           <div className="space-y-3 sm:space-y-4 max-w-lg">
             <Input label="Race Name" placeholder="e.g. Sunday Sprint" value={formName} onChange={(e) => setFormName(e.target.value)} />
             <Input label="Duration (minutes)" type="number" min="1" placeholder="e.g. 30" value={formDuration} onChange={(e) => setFormDuration(e.target.value)} />
@@ -197,7 +227,7 @@ export default function SeasonDetailPage() {
             </div>
             {error && <div className="rounded-xl bg-red-50 border border-red-100 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-red-600 font-medium">{error}</div>}
             <div className="flex gap-2 sm:gap-3">
-              <Button onClick={handleCreate} loading={saving}>Create Race</Button>
+              <Button onClick={editingRace ? handleUpdate : handleCreate} loading={saving}>{editingRace ? "Save Changes" : "Create Race"}</Button>
               <Button variant="secondary" onClick={resetForm}>Cancel</Button>
             </div>
           </div>
@@ -241,6 +271,11 @@ export default function SeasonDetailPage() {
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     <Badge text={race.status} className={statusStyles[race.status] || ""} />
+                    {race.status === "UPCOMING" && (
+                      <button onClick={() => startEditing(race)} className="text-[10px] sm:text-xs font-semibold bg-white text-gray-700 border border-gray-200 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl hover:bg-gray-50 transition">
+                        Edit
+                      </button>
+                    )}
                     {race.status === "CLOSED" && (
                       <button onClick={() => router.push(`/admin/races/${race.id}/results`)} className="text-[10px] sm:text-xs font-semibold bg-[#17251c] text-white px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl hover:bg-[#24372b] transition">
                         Enter Results
