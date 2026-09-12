@@ -67,7 +67,7 @@ export default function DashboardPage() {
   }, []);
 
   useWebSocket((event) => {
-    if (event === "race:status_changed" || event === "race:prediction_new") {
+    if (event === "race:status_changed" || event === "race:prediction_new" || event === "race:results_entered") {
       refetchData();
     }
   });

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import EmptyState from "@/components/EmptyState";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useWebSocket } from "@/lib/ws-client";
 
 interface User {
   id: string;
@@ -37,6 +38,26 @@ export default function LeaderboardPage() {
     if (mins > 0) return `${mins}m ${secs}s`;
     return `${secs}s`;
   }
+
+  const refetchData = useCallback(() => {
+    fetch("/api/leaderboard").then((r) => r.json()).then((data) => {
+      if (data.success) setLeaderboard(data.leaderboard);
+    });
+  }, []);
+
+  useWebSocket((event) => {
+    if (event === "race:results_entered" || event === "race:status_changed") {
+      refetchData();
+    }
+  });
+
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible") refetchData();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [refetchData]);
 
   useEffect(() => {
     Promise.all([
