@@ -16,7 +16,7 @@ export function proxy(request: NextRequest) {
   const isAuthPage = authPages.some((p) => pathname.startsWith(p));
 
   if (isAuthPage && sessionToken) {
-    return NextResponse.next();
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

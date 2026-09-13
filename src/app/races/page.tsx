@@ -33,13 +33,32 @@ export default function RacesPage() {
   });
 
   useEffect(() => {
-    Promise.all([fetch("/api/auth/me").then((r) => r.json()), fetch("/api/races").then((r) => r.json())])
-      .then(([meData, racesData]) => {
-        if (!meData.success) { router.push("/login"); return; }
-        setUser(meData.user);
-        if (racesData.success) setRaces(racesData.races);
+    async function initRaces() {
+      try {
+        const meRes = await fetch("/api/auth/me", { cache: "no-store" });
+        const meData = await meRes.json();
+
+        if (meRes.status === 401 || (meData && !meData.success)) {
+          router.push("/login");
+          return;
+        }
+
+        if (meData?.user) setUser(meData.user);
+
+        fetch("/api/races")
+          .then((r) => r.json())
+          .then((data) => {
+            if (data?.success) setRaces(data.races);
+          })
+          .catch(() => {});
+      } catch (err) {
+        console.error("Races page auth error:", err);
+      } finally {
         setLoading(false);
-      }).catch(() => router.push("/login"));
+      }
+    }
+
+    initRaces();
   }, [router]);
 
   if (loading) return <LoadingSpinner />;

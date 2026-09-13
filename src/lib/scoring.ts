@@ -64,6 +64,11 @@ export async function calculateRacePoints(raceId: string) {
   });
 
   if (updates.length > 0) {
-    await prisma.$transaction(updates);
+    // Execute in small batches with an extended timeout so large races never roll back
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+      const batch = updates.slice(i, i + BATCH_SIZE);
+      await prisma.$transaction(batch, { timeout: 20000 });
+    }
   }
 }

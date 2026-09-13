@@ -146,11 +146,26 @@ export default function RaceDetailPage() {
   }, [raceId, user]);
 
   useEffect(() => {
-    fetch("/api/auth/me").then((r) => r.json()).then((meData) => {
-      if (!meData.success) { router.push("/login"); return; }
-      setUser(meData.user);
-      fetchRace().finally(() => setLoading(false));
-    }).catch(() => router.push("/login"));
+    async function initRaceDetail() {
+      try {
+        const meRes = await fetch("/api/auth/me", { cache: "no-store" });
+        const meData = await meRes.json();
+
+        if (meRes.status === 401 || (meData && !meData.success)) {
+          router.push("/login");
+          return;
+        }
+
+        if (meData?.user) {
+          setUser(meData.user);
+          fetchRace().finally(() => setLoading(false));
+        }
+      } catch (err) {
+        console.error("Race detail auth error:", err);
+      }
+    }
+
+    initRaceDetail();
   }, [raceId, router, fetchRace]);
 
   useWebSocket((event, data) => {

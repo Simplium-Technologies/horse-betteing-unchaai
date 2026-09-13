@@ -25,16 +25,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((res) => {
+        if (res.status === 401) {
+          router.push("/login");
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (!data) return;
         if (data.success && data.user.role === "ADMIN") {
           setUser(data.user);
-        } else {
+        } else if (data.success) {
           router.push("/dashboard");
+        } else {
+          router.push("/login");
         }
       })
-      .catch(() => router.push("/login"))
+      .catch((err) => {
+        console.error("Admin layout auth check error:", err);
+      })
       .finally(() => setLoading(false));
   }, [router]);
 

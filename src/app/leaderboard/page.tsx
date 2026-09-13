@@ -60,15 +60,32 @@ export default function LeaderboardPage() {
   }, [refetchData]);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/leaderboard").then((r) => r.json()),
-    ]).then(([meData, lbData]) => {
-      if (!meData.success) { router.push("/login"); return; }
-      setUser(meData.user);
-      if (lbData.success) setLeaderboard(lbData.leaderboard);
-      setLoading(false);
-    }).catch(() => router.push("/login"));
+    async function initLeaderboard() {
+      try {
+        const meRes = await fetch("/api/auth/me", { cache: "no-store" });
+        const meData = await meRes.json();
+
+        if (meRes.status === 401 || (meData && !meData.success)) {
+          router.push("/login");
+          return;
+        }
+
+        if (meData?.user) setUser(meData.user);
+
+        fetch("/api/leaderboard")
+          .then((r) => r.json())
+          .then((lbData) => {
+            if (lbData?.success) setLeaderboard(lbData.leaderboard);
+          })
+          .catch(() => {});
+      } catch (err) {
+        console.error("Leaderboard page auth error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initLeaderboard();
   }, [router]);
 
   if (loading) return <LoadingSpinner />;

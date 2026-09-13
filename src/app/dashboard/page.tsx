@@ -81,23 +81,40 @@ export default function DashboardPage() {
   }, [refetchData]);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/auth/stats").then((r) => r.json()),
-      fetch("/api/races").then((r) => r.json()),
-    ])
-      .then(([meData, statsData, racesData]) => {
-        if (!meData.success) { router.push("/login"); return; }
-        if (meData.user.role === "ADMIN") { router.push("/admin"); return; }
-        setUser(meData.user);
-        if (statsData.success) setStats(statsData.stats);
-        if (racesData.success) {
-          const allRaces = racesData.races;
-          setRaces(allRaces.slice(0, 6));
+    async function initDashboard() {
+      try {
+        const meRes = await fetch("/api/auth/me", { cache: "no-store" });
+        const meData = await meRes.json();
+
+        if (meRes.status === 401 || (meData && !meData.success)) {
+          router.push("/login");
+          return;
         }
-      })
-      .catch(() => router.push("/login"))
-      .finally(() => setLoading(false));
+
+        if (meData?.user) {
+          if (meData.user.role === "ADMIN") {
+            router.push("/admin");
+            return;
+          }
+          setUser(meData.user);
+        }
+
+        // Fetch stats and races without redirecting to login on secondary fetch errors
+        Promise.all([
+          fetch("/api/auth/stats").then((r) => r.json()).catch(() => null),
+          fetch("/api/races").then((r) => r.json()).catch(() => null),
+        ]).then(([statsData, racesData]) => {
+          if (statsData?.success) setStats(statsData.stats);
+          if (racesData?.success) setRaces(racesData.races.slice(0, 6));
+        });
+      } catch (err) {
+        console.error("Dashboard auth check error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initDashboard();
   }, [router]);
 
   useEffect(() => {

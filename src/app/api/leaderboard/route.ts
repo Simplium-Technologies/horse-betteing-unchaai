@@ -13,8 +13,35 @@ export async function GET() {
         select: {
           totalPoints: true,
           submittedAt: true,
-          race: { select: { startedAt: true } },
+          selections: {
+            select: {
+              predictedPosition: true,
+              horse: {
+                select: { id: true, name: true, number: true },
+              },
+            },
+            orderBy: { predictedPosition: "asc" },
+          },
+          race: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              startedAt: true,
+              season: { select: { name: true } },
+              results: {
+                select: {
+                  actualPosition: true,
+                  horse: {
+                    select: { id: true, name: true, number: true },
+                  },
+                },
+                orderBy: { actualPosition: "asc" },
+              },
+            },
+          },
         },
+        orderBy: { submittedAt: "desc" },
       },
     },
   });
@@ -25,21 +52,53 @@ export async function GET() {
       let totalPoints = 0;
       const predictions = u.predictions;
 
-      for (let i = 0; i < predictions.length; i++) {
-        const p = predictions[i];
+      const breakdown = predictions.map((p) => {
         totalPoints += p.totalPoints;
+        let timeTakenSeconds = 0;
+
         if (p.race?.startedAt && p.submittedAt) {
           const diff = Math.floor((p.submittedAt.getTime() - p.race.startedAt.getTime()) / 1000);
-          if (diff > 0) totalSeconds += diff;
+          if (diff > 0) {
+            timeTakenSeconds = diff;
+            totalSeconds += diff;
+          }
         }
-      }
+
+        const userSelections = p.selections.map((s) => ({
+          position: s.predictedPosition,
+          horseId: s.horse.id,
+          horseName: s.horse.name,
+          horseNumber: s.horse.number,
+        }));
+
+        const actualResults = (p.race.results || []).map((r) => ({
+          position: r.actualPosition,
+          horseId: r.horse.id,
+          horseName: r.horse.name,
+          horseNumber: r.horse.number,
+        }));
+
+        return {
+          raceId: p.race.id,
+          raceName: p.race.name,
+          raceStatus: p.race.status,
+          seasonName: p.race.season?.name || null,
+          points: p.totalPoints,
+          submittedAt: p.submittedAt.toISOString(),
+          timeTakenSeconds,
+          selections: userSelections,
+          results: actualResults,
+        };
+      });
 
       return {
         userId: u.id,
         name: u.name || `+91 ${u.phoneNumber}`,
+        phoneNumber: u.phoneNumber,
         totalPoints,
         racesPlayed: predictions.length,
         totalSeconds,
+        breakdown,
       };
     })
     .sort((a, b) => {
