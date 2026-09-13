@@ -35,7 +35,7 @@ export async function calculateRacePoints(raceId: string) {
     results.map((r) => [r.horseId, r.actualPosition])
   );
 
-  for (const prediction of predictions) {
+  const updates = predictions.map((prediction) => {
     let totalPoints = 0;
 
     for (const selection of prediction.selections) {
@@ -57,9 +57,13 @@ export async function calculateRacePoints(raceId: string) {
       }
     }
 
-    await prisma.prediction.update({
+    return prisma.prediction.update({
       where: { id: prediction.id },
       data: { totalPoints },
     });
+  });
+
+  if (updates.length > 0) {
+    await prisma.$transaction(updates);
   }
 }

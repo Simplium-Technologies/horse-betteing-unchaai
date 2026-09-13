@@ -2,15 +2,16 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const leaderboard = await prisma.user.findMany({
+  const users = await prisma.user.findMany({
+    where: { role: "PARTICIPANT" },
     select: {
       id: true,
       name: true,
       phoneNumber: true,
       predictions: {
+        where: { race: { includePoints: true } },
         select: {
           totalPoints: true,
-          raceId: true,
           submittedAt: true,
           race: { select: { startedAt: true } },
         },
@@ -18,20 +19,26 @@ export async function GET() {
     },
   });
 
-  const ranked = leaderboard
+  const ranked = users
     .map((u) => {
       let totalSeconds = 0;
-      u.predictions.forEach((p) => {
-        if (p.race.startedAt && p.submittedAt) {
+      let totalPoints = 0;
+      const predictions = u.predictions;
+
+      for (let i = 0; i < predictions.length; i++) {
+        const p = predictions[i];
+        totalPoints += p.totalPoints;
+        if (p.race?.startedAt && p.submittedAt) {
           const diff = Math.floor((p.submittedAt.getTime() - p.race.startedAt.getTime()) / 1000);
           if (diff > 0) totalSeconds += diff;
         }
-      });
+      }
+
       return {
         userId: u.id,
         name: u.name || `+91 ${u.phoneNumber}`,
-        totalPoints: u.predictions.reduce((sum, p) => sum + p.totalPoints, 0),
-        racesPlayed: u.predictions.length,
+        totalPoints,
+        racesPlayed: predictions.length,
         totalSeconds,
       };
     })

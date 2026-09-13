@@ -155,8 +155,7 @@ export default function RaceDetailPage() {
 
   useWebSocket((event, data) => {
     if ((event === "race:status_changed" && data.raceId === raceId) ||
-        (event === "race:results_entered" && data.raceId === raceId) ||
-        (event === "race:prediction_new" && data.raceId === raceId)) {
+        (event === "race:results_entered" && data.raceId === raceId)) {
       fetchRace();
     }
   });

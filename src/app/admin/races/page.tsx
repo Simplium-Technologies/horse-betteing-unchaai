@@ -111,19 +111,35 @@ export default function AdminRacesPage() {
   }
 
   async function changeStatus(id: string, status: string) {
-    await fetch(`/api/admin/races/${id}/status`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    fetchData();
+    setRaces((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status } : r))
+    );
+    try {
+      const res = await fetch(`/api/admin/races/${id}/status`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!data.success) { fetchData(); }
+    } catch {
+      fetchData();
+    }
   }
 
   async function toggleIncludePoints(id: string, currentValue: boolean) {
-    await fetch("/api/admin/races", {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, includePoints: !currentValue }),
-    });
-    fetchData();
+    setRaces((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, includePoints: !currentValue } : r))
+    );
+    try {
+      const res = await fetch("/api/admin/races", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, includePoints: !currentValue }),
+      });
+      const data = await res.json();
+      if (!data.success) { fetchData(); }
+    } catch {
+      fetchData();
+    }
   }
 
   function getStatusAction(race: Race): { label: string; next: string } | null {

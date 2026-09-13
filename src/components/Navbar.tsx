@@ -58,7 +58,7 @@ export default function Navbar({ user, admin }: NavbarProps) {
   useEffect(() => {
     if (admin) return;
     checkRaces();
-    const pollRef = setInterval(checkRaces, 5000);
+    const pollRef = setInterval(checkRaces, 30000);
     return () => clearInterval(pollRef);
   }, [admin, checkRaces]);
 

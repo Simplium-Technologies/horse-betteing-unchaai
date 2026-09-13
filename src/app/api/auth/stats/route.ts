@@ -8,14 +8,6 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
   }
 
-  const predictions = await prisma.prediction.findMany({
-    where: { userId: user.id, race: { includePoints: true } },
-    select: { totalPoints: true, raceId: true },
-  });
-
-  const totalPoints = predictions.reduce((sum, p) => sum + p.totalPoints, 0);
-  const racesPlayed = predictions.length;
-
   const raceBreakdown = await prisma.prediction.findMany({
     where: { userId: user.id, race: { includePoints: true } },
     select: {
@@ -34,20 +26,19 @@ export async function GET() {
     orderBy: { submittedAt: "desc" },
   });
 
-  const allUsers = await prisma.user.findMany({
-    select: {
-      predictions: {
-        where: { race: { includePoints: true } },
-        select: { totalPoints: true },
-      },
-    },
+  const totalPoints = raceBreakdown.reduce((sum, p) => sum + p.totalPoints, 0);
+  const racesPlayed = raceBreakdown.length;
+
+  const userTotals = await prisma.prediction.groupBy({
+    by: ["userId"],
+    where: { race: { includePoints: true } },
+    _sum: { totalPoints: true },
   });
 
-  const userPoints = allUsers
-    .map((u) => u.predictions.reduce((sum, p) => sum + p.totalPoints, 0))
-    .sort((a, b) => b - a);
-
-  const rank = userPoints.findIndex((p) => p <= totalPoints) + 1 || userPoints.length;
+  const higherRankedCount = userTotals.filter(
+    (u) => (u._sum.totalPoints ?? 0) > totalPoints
+  ).length;
+  const rank = higherRankedCount + 1;
 
   return NextResponse.json({
     success: true,
